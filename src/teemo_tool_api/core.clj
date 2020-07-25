@@ -5,6 +5,7 @@
          '[ring.adapter.jetty :as jetty]
          '[ring.util.response :refer [response]]
          '[ring.middleware.json :refer [wrap-json-response wrap-json-body]]
+         '[ring.middleware.cors :refer [wrap-cors]]
          '[compojure.core :refer :all]
          '[compojure.route :as route]
          )
@@ -19,12 +20,12 @@
   (let [team (clojure.string/lower-case team)
         results (sql/query db ["SELECT amount FROM bets WHERE team = ?
 AND
-timestamp > date((SELECT MAX(timestamp) FROM bets), '-10 minutes')
+timestamp > datetime((SELECT MAX(timestamp) FROM bets), '-5 minutes')
 " team])]
     (map (fn [row] (get row :amount)) results)
     ))
 
-(bets-for-team db "blue")
+;(bets-for-team db "blue")
 
 (defn handle-team-request
   [team]
@@ -40,15 +41,18 @@ timestamp > date((SELECT MAX(timestamp) FROM bets), '-10 minutes')
   (-> app-routes
       wrap-json-body
       wrap-json-response
+      (wrap-cors :access-control-allow-methods [:get]
+                 :access-control-allow-headers ["Content-Type" "application/json"
+                                                ]
+                 :access-control-allow-origin [#".*"])
       ))
 
-(.stop server)
+;(.stop server)
 
-(def server (jetty/run-jetty app {:port 3002
-                      :join? false}))
-
+;(def server (jetty/run-jetty app {:port 3002
+;                      :join? false}))
 
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
-  (println "Hello, World!"))
+  (jetty/run-jetty app {:port 3002}))
