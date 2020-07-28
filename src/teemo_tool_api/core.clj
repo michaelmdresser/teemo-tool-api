@@ -121,4 +121,4 @@ timestamp > datetime((SELECT MAX(timestamp) FROM bets), '-5 minutes')
   [& args]
   (create-db-test-table)
 
-  (jetty/run-jetty app {:port 3002}))
+  (jetty/run-jetty app {:port 3000}))
