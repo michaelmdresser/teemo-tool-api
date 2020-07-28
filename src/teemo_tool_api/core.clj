@@ -18,7 +18,7 @@
 
 ; table for the test data
 (defn create-db-test-table
-  []
+  [db]
   (sql/db-do-commands db
                       (sql/create-table-ddl :test_bets
                                             [[:bettor :text]
@@ -88,6 +88,8 @@ timestamp > datetime((SELECT MAX(timestamp) FROM bets), '-5 minutes')
 (defn handle-test-generate-request
   [db]
   (let [bet-count (+ 10 (rand-int 40))]
+    (sql/execute! db ["DROP TABLE test_bets"])
+    (create-db-test-table db)
     (async/thread (test-generate db bet-count))
     (response {:started-data-gen "true"})))
 
@@ -119,6 +121,6 @@ timestamp > datetime((SELECT MAX(timestamp) FROM bets), '-5 minutes')
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
-  (create-db-test-table)
+  (create-db-test-table db)
 
   (jetty/run-jetty app {:port 3000}))
