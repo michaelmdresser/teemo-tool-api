@@ -14,7 +14,7 @@
 (def db
   {:classname   "org.sqlite.JDBC"
    :subprotocol "sqlite"
-   :subname     "/home/delta/devel/teemo-tool/db/database.db"})
+   :subname     "/home/delta/db/database.db"})
 
 ; table for the test data
 (defn create-db-test-table
@@ -84,7 +84,11 @@ timestamp > datetime((SELECT MAX(timestamp) FROM bets), '-5 minutes')
       (Thread/sleep 2000)))
     (prn "finished inserting test data")))
 
-
+; The test generation endpoint/handler is intended for frontend
+; developers who want to see how their changes affect the site
+; without having to wait for a new game on stream. Slowly inserts
+; ~10-50 bets into the test table which is accessed via the
+; standard endpoints prepended with /test
 (defn handle-test-generate-request
   [db]
   (let [bet-count (+ 10 (rand-int 40))]
@@ -93,6 +97,20 @@ timestamp > datetime((SELECT MAX(timestamp) FROM bets), '-5 minutes')
     (async/thread (test-generate db bet-count))
     (response {:started-data-gen "true"})))
 
+; Easter egg. Patrick Rothfuss is, surprisingly, a regular bettor
+; on the Salty Teemo stream. Queries his bets specifically.
+(defn handle-rothfuss-latest
+  [db]
+  (let [query-result (sql/query db ["SELECT team, amount, timestamp FROM bets WHERE bettor = ? AND timestamp = (SELECT MAX(timestamp) FROM bets WHERE bettor = ?)" "PatrickRothfuss" "PatrickRothfuss"])
+        bet-row (first query-result)
+        ]
+    (response bet-row)))
+
+(defn handle-rothfuss-all
+  [db]
+  (let [query-result (sql/query db ["SELECT team, amount, timestamp FROM bets WHERE bettor = ?" "PatrickRothfuss"])]
+    (response query-result)))
+
 (def app-routes
   (routes
    (GET "/bets/blue" request (handle-team-request "blue"))
@@ -100,6 +118,8 @@ timestamp > datetime((SELECT MAX(timestamp) FROM bets), '-5 minutes')
    (GET "/test/bets/generate" request (handle-test-generate-request db))
    (GET "/test/bets/blue" request (handle-test-team-request "blue"))
    (GET "/test/bets/red" request (handle-test-team-request "red"))
+   (GET "/bets/rothfuss/latest" request (handle-rothfuss-latest db))
+   (GET "/bets/rothfuss/all" request (handle-rothfuss-all db))
    (route/not-found {:error "not found"})))
 
 (def app
